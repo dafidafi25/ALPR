@@ -24,14 +24,14 @@ def detect_plate(input):
 
     detectedAr = DetectByAR(imgGrayscale,contours=cnts)
 
-    cv2.imshow("img_thresh",img_thresh)
+    # cv2.imshow("img_thresh",img_thresh)
     
     DetectByVector(imgGrayscale,img_thresh,img)
 
 
 def DetectByAR(imgGrayscale,contours):
     cv2.drawContours(imgGrayscale,contours,-1,(255,0,0),2)
-    cv2.imshow("contoured image", imgGrayscale)
+    # cv2.imshow("contoured image", imgGrayscale)
     # for c in contours:
     #     roi = None
     #     (x, y, w, h) = cv2.boundingRect(c)
@@ -66,15 +66,15 @@ def DetectByVector(gray,thresh,img):
                                               cv2.CHAIN_APPROX_NONE)  # find all contours
     cnts = im.grab_contours(cnts)
     filtered_cnts = []
-    
+   
     for cnt in cnts:
         x,y,w,h = cv2.boundingRect(cnt)
         width = x+w
-        height = y+h
 
         if(width < 800 and width >200 and w > 20 and w<40 and h<100 and h> 20):
             filtered_cnts.append([x,y,w,h])
-            print([x,y,w,h])
+            
+            # print([x,y,w,h])
                 
 
     distance_threshold = 15 
@@ -104,6 +104,7 @@ def DetectByVector(gray,thresh,img):
     y_master = 9999
     w_master = 0
     h_master = 0
+
     for i in range(len(filtered_cnts)):
         if abs(filtered_cnts[i][1] - most_unique[0]) < distance_threshold:
             rectangle.append(filtered_cnts)
@@ -112,6 +113,7 @@ def DetectByVector(gray,thresh,img):
             w = filtered_cnts[i][2]
             h = filtered_cnts[i][3]
             # print([x,y,w,h])
+            
             x_master = x if x < x_master else x_master
             y_master = y if y < y_master else y_master
             w_master = w+x if w+x > w_master else w_master
@@ -124,23 +126,50 @@ def DetectByVector(gray,thresh,img):
     h_master += area
 
     # cv2.rectangle(img,(x_master ,y_master  ),(w_master ,h_master  ),(255,255,0),2)
-    cv2.imshow("Filtered",img)
+    # cv2.imshow("Filtered",img)
     cropped = img[y_master:h_master, x_master:w_master]
-    cv2.imshow("Cropped",cropped)
-    imgGrayscale, img_thresh = pp.preprocess(cropped)
-    cv2.imshow("Ready to read",img_thresh)
-    print("tesseract : " + pytesseract.image_to_string(img_thresh,config='--psm 11'))
+    cropped_grayscale,cropped_thresh = pp.preprocess(cropped)
+    cv2.imshow("Cropped Image",cropped)
+    cv2.imshow("Thresholded Cropped Image",cropped_thresh)
+    cnts = cv2.findContours(cropped_thresh, cv2.RETR_EXTERNAL,
+                                              cv2.CHAIN_APPROX_NONE)  # find all contours
+    cnts = im.grab_contours(cnts)
+
+    final_cnts =[]
+    excluded_cnts = []
+    for cnt in cnts:
+        cont_area = cv2.contourArea(cnt)
+        x,y,w,h = cv2.boundingRect(cnt)
+        if(cont_area>100 and w<100):
+            final_cnts.append(cnt)
+            
+        else:
+            excluded_cnts.append(cnt)
+            
+    
+    # cv2.drawContours(cropped_thresh,final_cnts,-1,(255,255,255),cv2.FILLED)
+    cv2.drawContours(cropped_thresh,excluded_cnts,-1,(0,0,0),cv2.FILLED)
+
+    cropped_thresh = cv2.dilate(cropped_thresh,kernel_disk_shaped(2),iterations = 1)
+    cv2.imshow("preprocessed tesseract Image",cropped_thresh)
+    print("tesseract : " + pytesseract.image_to_string(cropped_thresh,config='--psm 10'))
 
 
-
+def kernel_disk_shaped(r):
+    n = r*2+1
+    a, b = r, r
+    y,x = np.ogrid[-a:n-a, -b:n-b]
+    mask = x*x + y*y <= r*r
+    mask = mask.astype(np.uint8)
+    return(mask)
 
 def main():
-    # image_path4 = '/Users/dafigumawangpriadi/work/joki_ta/ALPR/images/dafi/22.jpeg' # MAC-Path
-    # image_path4 = './images/dafi/35.jpeg' # PC-Path
+    image_path4 = '/Users/dafigumawangpriadi/work/joki_ta/ALPR/images/dafi/35.jpeg' # MAC-Path
+    # image_path4 = './images/dafi/24.jpeg' # PC-Path
     # detect_plate(image_path4)
     # cv2.waitKey()
     # image_path1 = 'D:/Dafi/Kerja/Joki TA/Rio/images/mobil/Cars1.png'
-    image_path4 = './images/dafi/23.jpeg' # PC-Path
+  
     detect_plate(image_path4)
     
     cv2.waitKey()
