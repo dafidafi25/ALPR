@@ -129,8 +129,8 @@ def DetectByVector(gray,thresh,img):
     # cv2.imshow("Filtered",img)
     cropped = img[y_master:h_master, x_master:w_master]
     cropped_grayscale,cropped_thresh = pp.preprocess(cropped)
-    cv2.imshow("Cropped Image",cropped)
-    cv2.imshow("Thresholded Cropped Image",cropped_thresh)
+    # cv2.imshow("Cropped Image",cropped)
+    # cv2.imshow("Thresholded Cropped Image",cropped_thresh)
     cnts = cv2.findContours(cropped_thresh, cv2.RETR_EXTERNAL,
                                               cv2.CHAIN_APPROX_NONE)  # find all contours
     cnts = im.grab_contours(cnts)
@@ -151,8 +151,8 @@ def DetectByVector(gray,thresh,img):
     cv2.drawContours(cropped_thresh,excluded_cnts,-1,(0,0,0),cv2.FILLED)
 
     cropped_thresh = cv2.dilate(cropped_thresh,kernel_disk_shaped(2),iterations = 1)
-    cv2.imshow("preprocessed tesseract Image",cropped_thresh)
-    print("tesseract : " + pytesseract.image_to_string(cropped_thresh,config='--psm 10'))
+    # cv2.imshow("preprocessed tesseract Image",cropped_thresh)
+    print("tesseract : " + pytesseract.image_to_string(cropped_thresh,config='--psm 11'))
 
 
 def kernel_disk_shaped(r):
@@ -164,8 +164,8 @@ def kernel_disk_shaped(r):
     return(mask)
 
 def main():
-    image_path4 = '/Users/dafigumawangpriadi/work/joki_ta/ALPR/images/dafi/35.jpeg' # MAC-Path
-    # image_path4 = './images/dafi/24.jpeg' # PC-Path
+  
+    image_path4 = '/home/pi/work/ALPR/images/rio/24.jpeg'
     # detect_plate(image_path4)
     # cv2.waitKey()
     # image_path1 = 'D:/Dafi/Kerja/Joki TA/Rio/images/mobil/Cars1.png'
