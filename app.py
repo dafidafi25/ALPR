@@ -1,5 +1,5 @@
 import flask
-from flask import  request,jsonify
+from flask import request, jsonify
 from database import databaseConnector
 import json
 from queue import Queue, Empty
