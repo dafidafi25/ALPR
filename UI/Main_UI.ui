@@ -27,7 +27,7 @@
      <item>
       <widget class="QLabel" name="Gambar1">
        <property name="text">
-        <string>gambar1</string>
+        <string/>
        </property>
       </widget>
      </item>
@@ -42,7 +42,7 @@
           </size>
          </property>
          <property name="text">
-          <string>TextLabel</string>
+          <string>Pelat Nomor</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -52,7 +52,7 @@
        <item>
         <widget class="QLabel" name="gambar2">
          <property name="text">
-          <string>gambar2</string>
+          <string/>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -68,7 +68,7 @@
           </size>
          </property>
          <property name="text">
-          <string>TextLabel</string>
+          <string>Pelat Nomor Olahan</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -78,7 +78,7 @@
        <item>
         <widget class="QLabel" name="gambar3">
          <property name="text">
-          <string>gambar2</string>
+          <string/>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -101,10 +101,13 @@
     <layout class="QHBoxLayout" name="TableLayout">
      <item>
       <layout class="QFormLayout" name="left_layout">
+       <property name="formAlignment">
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+       </property>
        <item row="1" column="0">
         <widget class="QLabel" name="Nama">
          <property name="text">
-          <string>TextLabel</string>
+          <string>Email</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -114,7 +117,7 @@
        <item row="0" column="0">
         <widget class="QLabel" name="Email">
          <property name="text">
-          <string>TextLabel</string>
+          <string>Nama</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -128,10 +131,13 @@
      </item>
      <item>
       <layout class="QFormLayout" name="right_layout">
+       <property name="formAlignment">
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+       </property>
        <item row="1" column="0">
         <widget class="QLabel" name="Registered_plate">
          <property name="text">
-          <string>TextLabel</string>
+          <string>Pelat Nomor</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -141,10 +147,10 @@
        <item row="0" column="0">
         <widget class="QLabel" name="Phone">
          <property name="text">
-          <string>TextLabel</string>
+          <string>Phone</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignCenter</set>
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -159,7 +165,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>22</height>
+     <height>24</height>
     </rect>
    </property>
   </widget>

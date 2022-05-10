@@ -8,7 +8,6 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from cgitb import grey
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect,
     QSize, QTime, QUrl, Qt)
@@ -19,9 +18,6 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QApplication, QFormLayout, QHBoxLayout, QLabel,
     QMainWindow, QMenuBar, QSizePolicy, QStatusBar,
     QVBoxLayout, QWidget)
-
-from PySide6 import QtGui
-import cv2
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -38,10 +34,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.Gambar1 = QLabel(self.horizontalLayoutWidget)
         self.Gambar1.setObjectName(u"Gambar1")
-        grey = QPixmap(500,401)
-        grey.fill(QColor('darkgray'))
-        qt_img = self.convert_cv_qt('/Users/dafigumawangpriadi/work/joki_ta/ALPR/images/rio/2.jpg')
-        self.Gambar1.setPixmap(qt_img)
+
         self.horizontalLayout.addWidget(self.Gambar1)
 
         self.verticalLayout_2 = QVBoxLayout()
@@ -131,16 +124,6 @@ class Ui_MainWindow(object):
 
         QMetaObject.connectSlotsByName(MainWindow)
     # setupUi
-
-    def convert_cv_qt(self, img_path):
-        """Convert from an opencv image to QPixmap"""
-        cv_img = cv2.imread(img_path)
-        rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
-        h, w, ch = rgb_image.shape
-        bytes_per_line = ch * w
-        convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
-        p = convert_to_Qt_format.scaled(600, 600, Qt.KeepAspectRatio)
-        return QPixmap.fromImage(p)
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
