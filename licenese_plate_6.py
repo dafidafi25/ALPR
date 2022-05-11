@@ -6,6 +6,7 @@ import cv2
 import imutils as im
 import numpy as np
 from skimage.segmentation import clear_border
+from hikvision import isapiClient
 
 import pytesseract
 
@@ -151,7 +152,7 @@ def DetectByVector(gray,thresh,img):
     cv2.drawContours(cropped_thresh,excluded_cnts,-1,(0,0,0),cv2.FILLED)
 
     cropped_thresh = cv2.dilate(cropped_thresh,kernel_disk_shaped(2),iterations = 1)
-    # cv2.imshow("preprocessed tesseract Image",cropped_thresh)
+    cv2.imshow("preprocessed tesseract Image",cropped_thresh)
     print("tesseract : " + pytesseract.image_to_string(cropped_thresh,config='--psm 11'))
 
 
@@ -163,17 +164,18 @@ def kernel_disk_shaped(r):
     mask = mask.astype(np.uint8)
     return(mask)
 
-def main():
-  
-    image_path4 = '/home/pi/work/ALPR/images/rio/24.jpeg'
+if __name__=="__main__":
+    # image_path4 = '/home/pi/work/ALPR/images/rio/24.jpeg'
     # detect_plate(image_path4)
     # cv2.waitKey()
     # image_path1 = 'D:/Dafi/Kerja/Joki TA/Rio/images/mobil/Cars1.png'
-  
-    detect_plate(image_path4)
+    ip = "192.168.2.64"
+    port = "80"
+    host = 'http://'+ip + ':'+ port
+    cam = isapiClient(host, 'admin', '-arngnennscfrer2')
+    detect_plate(cam)
     
     cv2.waitKey()
 
 
-main()
 
