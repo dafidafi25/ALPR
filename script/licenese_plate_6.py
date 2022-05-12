@@ -27,8 +27,8 @@ def detect_plate(input):
 
     # cv2.imshow("img_thresh",img_thresh)
     
-    DetectByVector(imgGrayscale,img_thresh,img)
-
+    img,cropped_img,cropped = DetectByVector(imgGrayscale,img_thresh,img)
+    return img,cropped_img,cropped
 
 def DetectByAR(imgGrayscale,contours):
     cv2.drawContours(imgGrayscale,contours,-1,(255,0,0),2)
@@ -152,8 +152,10 @@ def DetectByVector(gray,thresh,img):
     cv2.drawContours(cropped_thresh,excluded_cnts,-1,(0,0,0),cv2.FILLED)
 
     cropped_thresh = cv2.dilate(cropped_thresh,kernel_disk_shaped(2),iterations = 1)
-    cv2.imshow("preprocessed tesseract Image",cropped_thresh)
+    # cv2.imshow("preprocessed tesseract Image",cropped_thresh)
     print("tesseract : " + pytesseract.image_to_string(cropped_thresh,config='--psm 11'))
+
+    return img, cropped_thresh, cropped
 
 
 def kernel_disk_shaped(r):

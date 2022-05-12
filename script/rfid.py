@@ -6,10 +6,6 @@ import json
 from hikvision import isapiClient
 import cv2
 
-
-
-
-
 #Starting connection
 device = readers()
 connection = device[0].createConnection()

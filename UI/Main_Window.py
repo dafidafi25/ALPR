@@ -9,9 +9,10 @@
 ################################################################################
 
 from cgitb import grey
+from time import sleep
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect,
-    QSize, QTime, QUrl, Qt)
+    QSize, QTime, QUrl, Qt, QThread)
 from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
@@ -20,8 +21,84 @@ from PySide6.QtWidgets import (QApplication, QFormLayout, QHBoxLayout, QLabel,
     QMainWindow, QMenuBar, QSizePolicy, QStatusBar,
     QVBoxLayout, QWidget)
 
-from PySide6 import QtGui
+import requests
+
+from PySide6 import QtGui,QtCore
 import cv2
+# some_file.py
+import sys
+# insert at 1, 0 is the script path (or '' in REPL)
+sys.path.insert(1, 'D:\Dafi\Kerja\Joki TA\Rio\ML\Program_Dafi\script')
+import rfid #type: ignore
+import licenese_plate_6 #type: ignore
+from database import databaseConnector #type: ignore
+
+from smartcard.util import toHexString
+
+
+workerDB = databaseConnector(host="localhost",user="root",password="",database="ANPR_RFID")
+
+class WorkerThread(QThread):
+    update_reader = QtCore.Signal(object,object,object)
+    update_user = QtCore.Signal(dict)
+   
+    rfid.init()
+    def run(self):
+        self.gate = 0
+        self.cnt = 0
+        url = 'http://192.168.1.10:7000/api'
+        while True:
+            if rfid.isNewCard() and self.gate == 0:
+                
+                try:
+                    data_hex = rfid.readBlock(0,16,1)
+                    data_hex = toHexString(data_hex)
+
+                    data = requests.post(url+"/validate/uid/",json={
+                        "uid": data_hex
+                    })
+                    data = data.json()
+
+                    requests.post(url+"/insert/log", json = {
+                        "user_id": int(data['id']),
+                        "status": int(data['status'])
+                    })
+           
+                    requests.post(url+"/update/" + str(data['id']) , json = {
+                        "status": 1 if data['status'] == 0 else 0 
+                    })
+    
+                    self.update_user.emit(data)
+                    img,cropped_thresh,cropped = licenese_plate_6.detect_plate('../images/rio/24.jpeg')
+                    self.update_reader.emit(img,cropped_thresh,cropped)
+                    self.openGate()
+                except:
+                    print("error")
+            elif self.gate == 1:
+                self.counting()
+                if self.cnt == 5:
+                    self.closeGate()
+                    self.reset()
+                
+            sleep(0.4)
+    
+    def openGate(self):
+        self.gate = 1
+
+    def closeGate(self):
+        self.gate = 0
+    
+    def counting(self):
+        self.cnt += 1
+    
+    def reset(self):
+        self.gate = 0
+        self.cnt = 0
+
+class WorkerThread2(QThread):
+    def run(self):
+        import app #type: ignore
+        
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -33,15 +110,14 @@ class Ui_MainWindow(object):
         self.horizontalLayoutWidget = QWidget(self.centralwidget)
         self.horizontalLayoutWidget.setObjectName(u"horizontalLayoutWidget")
         self.horizontalLayoutWidget.setGeometry(QRect(10, 10, 771, 401))
+        grey = QPixmap(500,401)
+        grey.fill(QColor('darkgray'))
         self.horizontalLayout = QHBoxLayout(self.horizontalLayoutWidget)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.Gambar1 = QLabel(self.horizontalLayoutWidget)
         self.Gambar1.setObjectName(u"Gambar1")
-        grey = QPixmap(500,401)
-        grey.fill(QColor('darkgray'))
-        qt_img = self.convert_cv_qt('/Users/dafigumawangpriadi/work/joki_ta/ALPR/images/rio/2.jpg')
-        self.Gambar1.setPixmap(qt_img)
+
         self.horizontalLayout.addWidget(self.Gambar1)
 
         self.verticalLayout_2 = QVBoxLayout()
@@ -88,14 +164,21 @@ class Ui_MainWindow(object):
         self.Nama.setObjectName(u"Nama")
         self.Nama.setAlignment(Qt.AlignCenter)
 
-        self.left_layout.setWidget(1, QFormLayout.LabelRole, self.Nama)
+        self.left_layout.setWidget(0, QFormLayout.LabelRole, self.Nama)
 
         self.Email = QLabel(self.horizontalLayoutWidget_2)
         self.Email.setObjectName(u"Email")
         self.Email.setAlignment(Qt.AlignCenter)
         self.Email.setWordWrap(False)
 
-        self.left_layout.setWidget(0, QFormLayout.LabelRole, self.Email)
+        self.left_layout.setWidget(2, QFormLayout.LabelRole, self.Email)
+        
+        self.Status = QLabel(self.horizontalLayoutWidget_2)
+        self.Status.setObjectName(u"Status")
+        self.Status.setAlignment(Qt.AlignCenter)
+        self.Status.setWordWrap(False)
+
+        self.left_layout.setWidget(1, QFormLayout.LabelRole, self.Status)
 
 
         self.TableLayout.addLayout(self.left_layout)
@@ -130,17 +213,19 @@ class Ui_MainWindow(object):
         self.retranslateUi(MainWindow)
 
         QMetaObject.connectSlotsByName(MainWindow)
-    # setupUi
 
-    def convert_cv_qt(self, img_path):
-        """Convert from an opencv image to QPixmap"""
-        cv_img = cv2.imread(img_path)
-        rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
-        h, w, ch = rgb_image.shape
-        bytes_per_line = ch * w
-        convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
-        p = convert_to_Qt_format.scaled(600, 600, Qt.KeepAspectRatio)
-        return QPixmap.fromImage(p)
+        self.Gambar1.setPixmap(grey)
+        self.gambar2.setPixmap(grey)
+        self.gambar3.setPixmap(grey)
+
+        self.worker = WorkerThread()
+        self.worker.start()
+        self.worker.update_reader.connect(self.handlerfid)
+        self.worker.update_user.connect(self.handleUpdateText)
+
+        self.worker2 = WorkerThread2()
+        self.worker2.start()
+    # setupUi
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
@@ -153,5 +238,39 @@ class Ui_MainWindow(object):
         self.Email.setText(QCoreApplication.translate("MainWindow", u"Nama", None))
         self.Registered_plate.setText(QCoreApplication.translate("MainWindow", u"Pelat Nomor", None))
         self.Phone.setText(QCoreApplication.translate("MainWindow", u"Phone", None))
+        self.Status.setText(QCoreApplication.translate("MainWindow", u"Status", None))
     # retranslateUi
+    
+    def convert_cv_qt(self, img, widht, height):
+        """Convert from an opencv image to QPixmap"""
+        rgb_image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        h, w, ch = rgb_image.shape
+        bytes_per_line = ch * w
+        convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
+        p = convert_to_Qt_format.scaled(widht, height, Qt.KeepAspectRatio)
+        return QPixmap.fromImage(p)
+    
+    def handlerfid(self,img,cropped_thresh,cropped):
+        self.setImage1(img,cropped_thresh,cropped)
+    
+    def handleUpdateText(self,data):
+        plate_number = data['plate_number']
+        name = data['name']
+        phone = data['phone']
+        email = data['email']
+        status = data['status']
+        self.Status.setText("Masuk" if status == 0 else "Keluar")
+        self.Nama.setText(name)
+        self.Phone.setText(phone)
+        self.Registered_plate.setText(plate_number)
+        self.Email.setText(email)
+
+    
+    def setImage1(self,img,cropped_thresh,cropped):
+        qt_img = self.convert_cv_qt(img,382,399)
+        self.Gambar1.setPixmap(qt_img)
+        qt_img = self.convert_cv_qt(cropped,379,136)
+        self.gambar2.setPixmap(qt_img)
+        qt_img = self.convert_cv_qt(cropped_thresh,379,136)
+        self.gambar3.setPixmap(qt_img)
 
