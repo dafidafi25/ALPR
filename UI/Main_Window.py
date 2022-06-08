@@ -10,33 +10,33 @@
 
 from cgitb import grey
 from time import sleep
-from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect,
     QSize, QTime, QUrl, Qt, QThread)
-from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QFormLayout, QHBoxLayout, QLabel,
+from PySide2.QtWidgets import (QApplication, QFormLayout, QHBoxLayout, QLabel,
     QMainWindow, QMenuBar, QSizePolicy, QStatusBar,
     QVBoxLayout, QWidget)
 
 import requests
+import re
 
-from PySide6 import QtGui,QtCore
+from PySide2 import QtGui,QtCore
 import cv2
 # some_file.py
 import sys
 # insert at 1, 0 is the script path (or '' in REPL)
-sys.path.insert(1, 'D:\Dafi\Kerja\Joki TA\Rio\ML\Program_Dafi\script')
+sys.path.insert(1, '/home/pi/work/ALPR/script')
 import rfid #type: ignore
 import licenese_plate_6 #type: ignore
 from database import databaseConnector #type: ignore
+from hikvision import isapiClient #type: ignore
 
 from smartcard.util import toHexString
 
-
-workerDB = databaseConnector(host="localhost",user="root",password="",database="ANPR_RFID")
 
 class WorkerThread(QThread):
     update_reader = QtCore.Signal(object,object,object)
@@ -46,41 +46,70 @@ class WorkerThread(QThread):
     def run(self):
         self.gate = 0
         self.cnt = 0
-        url = 'http://192.168.1.10:7000/api'
+        ip = "192.168.2.64"
+        port = "80"
+        host = 'http://'+ip + ':'+ port
+        url = 'http://192.168.1.100:7000/api'
+        self.cam = isapiClient(host, 'admin', '-arngnennscfrer2')
         while True:
             if rfid.isNewCard() and self.gate == 0:
-                
                 try:
+                    print("tes")
                     data_hex = rfid.readBlock(0,16,1)
                     data_hex = toHexString(data_hex)
 
                     data = requests.post(url+"/validate/uid/",json={
                         "uid": data_hex
-                    })
-                    data = data.json()
+                    }).json()
+                    self.cctv_img = self.requestPicture()
+                    # self.cctv_img = cv2.imread("/home/pi/work/ALPR/images/rio/24.jpeg")
+                   
+                    img,cropped_thresh,cropped, detected_string = licenese_plate_6.detect_plate(self.cctv_img )
+                    detected_string = re.findall(r'\(?([0-9A-Za-z]+)\)?', detected_string)
+                    regex = ""
+                    cnt = 0
+                    print(detected_string)
+                    for text in detected_string:
+                        regex += text
+                        if cnt != len(detected_string)-1:
+                            regex += " "
+                        cnt+=1
+                    self.update_reader.emit(img,cropped_thresh,cropped)
+        
+                    # self.update_reader.emit(img,cropped_thresh,cropped)
+                    valid = requests.post(url+"/validate/plate_number/",json={
+                        "plate_number": regex
+                    }).json()
 
+                    assert valid != False, "Plate Number not Registered"
+                    if data['status'] == None:
+                        data['status'] = 0
+                
+             
                     requests.post(url+"/insert/log", json = {
                         "user_id": int(data['id']),
                         "status": int(data['status'])
                     })
            
                     requests.post(url+"/update/" + str(data['id']) , json = {
-                        "status": 1 if data['status'] == 0 else 0 
+                        "status": 1 if data['status'] == 0  else 0 
                     })
     
                     self.update_user.emit(data)
-                    img,cropped_thresh,cropped = licenese_plate_6.detect_plate('../images/rio/24.jpeg')
-                    self.update_reader.emit(img,cropped_thresh,cropped)
+                    print("berhasil")
+
+                    
                     self.openGate()
                 except:
+                    # self.update_reader.emit(self.cctv_img,self.cctv_img,self.cctv_img)
                     print("error")
             elif self.gate == 1:
                 self.counting()
                 if self.cnt == 5:
                     self.closeGate()
                     self.reset()
-                
-            sleep(0.4)
+                    
+            sleep(1)
     
     def openGate(self):
         self.gate = 1
@@ -94,6 +123,10 @@ class WorkerThread(QThread):
     def reset(self):
         self.gate = 0
         self.cnt = 0
+    
+    def requestPicture(self):
+        img = self.cam.pictureRequest()
+        return img
 
 class WorkerThread2(QThread):
     def run(self):

@@ -10,8 +10,8 @@ from hikvision import isapiClient
 
 import pytesseract
 
-def detect_plate(input):
-    img = cv2.imread(input)
+def detect_plate(img):
+    # img = cv2.imread(input)
 
     img = im.resize(img, width=1080)
 
@@ -27,8 +27,8 @@ def detect_plate(input):
 
     # cv2.imshow("img_thresh",img_thresh)
     
-    img,cropped_img,cropped = DetectByVector(imgGrayscale,img_thresh,img)
-    return img,cropped_img,cropped
+    img,cropped_img,cropped, detected_string = DetectByVector(imgGrayscale,img_thresh,img)
+    return img,cropped_img,cropped, detected_string
 
 def DetectByAR(imgGrayscale,contours):
     cv2.drawContours(imgGrayscale,contours,-1,(255,0,0),2)
@@ -153,9 +153,10 @@ def DetectByVector(gray,thresh,img):
 
     cropped_thresh = cv2.dilate(cropped_thresh,kernel_disk_shaped(2),iterations = 1)
     # cv2.imshow("preprocessed tesseract Image",cropped_thresh)
-    print("tesseract : " + pytesseract.image_to_string(cropped_thresh,config='--psm 11'))
+    detected_string = pytesseract.image_to_string(cropped_thresh,config='--psm 11')
+    print("tesseract : " + detected_string)
 
-    return img, cropped_thresh, cropped
+    return img, cropped_thresh, cropped, detected_string
 
 
 def kernel_disk_shaped(r):
@@ -175,7 +176,7 @@ if __name__=="__main__":
     port = "80"
     host = 'http://'+ip + ':'+ port
     cam = isapiClient(host, 'admin', '-arngnennscfrer2')
-    detect_plate(cam)
+    detect_plate(cam.pictureRequest())
     
     cv2.waitKey()
 

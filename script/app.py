@@ -36,7 +36,7 @@ cors = CORS(app, origins=CORS_ALLOW_ORIGIN.split(","), allow_headers=CORS_ALLOW_
 # app.config["DEBUG"] = True
 app.config['CORS_HEADERS'] = 'Content-Type'
 
-database = databaseConnector(host="localhost",user="root",password="",database="ANPR_RFID")
+database = databaseConnector(host="localhost",user="root",password="root",database="ANPR_RFID")
 
 @app.route('/api/', methods=['GET'])
 def home():
