@@ -52,10 +52,13 @@ class databaseConnector:
 
     def validateDataByUid(self,uid):
         val = (uid,)
+        print(uid)
 
         self.controller.execute(GET_DATA_BY_UID,val)
 
         result = self.controller.fetchall()
+
+        print(result)
         if len(result)>0:
             return {
                 "id":result[0][0],

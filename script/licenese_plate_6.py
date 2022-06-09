@@ -171,12 +171,13 @@ if __name__=="__main__":
     # image_path4 = '/home/pi/work/ALPR/images/rio/24.jpeg'
     # detect_plate(image_path4)
     # cv2.waitKey()
-    # image_path1 = 'D:/Dafi/Kerja/Joki TA/Rio/images/mobil/Cars1.png'
-    ip = "192.168.2.64"
-    port = "80"
-    host = 'http://'+ip + ':'+ port
-    cam = isapiClient(host, 'admin', '-arngnennscfrer2')
-    detect_plate(cam.pictureRequest())
+    image_path1 = '/home/pi/work/tugas_akhir/ALPR/images/rio/35.jpeg'
+    test = cv2.imread(image_path1)
+    # ip = "192.168.2.64"
+    # port = "80"
+    # host = 'http://'+ip + ':'+ port
+    # cam = isapiClient(host, 'admin', '-arngnennscfrer2')
+    detect_plate(test)
     
     cv2.waitKey()
 

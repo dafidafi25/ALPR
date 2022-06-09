@@ -94,6 +94,7 @@ if __name__=="__main__":
     while True:
         if isNewCard():
             data = readBlock(0,16,1)
+            print(data)
             myobj = {'uid': toHexString(data)}
             print(myobj)
             img = cam.pictureRequest()

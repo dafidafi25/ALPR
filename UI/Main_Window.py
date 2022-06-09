@@ -29,7 +29,7 @@ import cv2
 # some_file.py
 import sys
 # insert at 1, 0 is the script path (or '' in REPL)
-sys.path.insert(1, '/home/pi/work/ALPR/script')
+sys.path.insert(1, '/home/pi/work/tugas_akhir/ALPR/script')
 import rfid #type: ignore
 import licenese_plate_6 #type: ignore
 from database import databaseConnector #type: ignore
@@ -49,7 +49,7 @@ class WorkerThread(QThread):
         ip = "192.168.2.64"
         port = "80"
         host = 'http://'+ip + ':'+ port
-        url = 'http://192.168.1.100:7000/api'
+        url = 'http://192.168.1.130:7000/api'
         self.cam = isapiClient(host, 'admin', '-arngnennscfrer2')
         while True:
             if rfid.isNewCard() and self.gate == 0:
@@ -61,8 +61,9 @@ class WorkerThread(QThread):
                     data = requests.post(url+"/validate/uid/",json={
                         "uid": data_hex
                     }).json()
-                    self.cctv_img = self.requestPicture()
-                    # self.cctv_img = cv2.imread("/home/pi/work/ALPR/images/rio/24.jpeg")
+
+                    # self.cctv_img = self.requestPicture()
+                    self.cctv_img = cv2.imread("/home/pi/work/tugas_akhir/ALPR/images/rio/35.jpeg")
                    
                     img,cropped_thresh,cropped, detected_string = licenese_plate_6.detect_plate(self.cctv_img )
                     detected_string = re.findall(r'\(?([0-9A-Za-z]+)\)?', detected_string)
