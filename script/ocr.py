@@ -1,7 +1,7 @@
 import cv2
 import pytesseract
 
-image_path4 = 'D:/Dafi/Kerja/Joki TA/Rio/images/dafi/processed_2.jpg'
+image_path4 = '/home/rio/work/tugas_akhir/ALPR/images/rio/processed_2.jpg'
 
 img = cv2.imread(image_path4)
 

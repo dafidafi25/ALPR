@@ -1,14 +1,14 @@
 import sys
 
-# from PySide6.QtGui import QIcon
-# from PySide6.QtCore import QTimer
-# from PySide6.QtWidgets import QApplication, QMainWindow
+from PyQt5.QtWidgets import QMainWindow, QApplication
+
+
 from Main_Window import Ui_MainWindow
-from PySide2.QtWidgets import QApplication,QMainWindow
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
+        print('wawa')
         super(MainWindow, self).__init__()
         self.setWindowTitle("Admin GUI")
         self.ui = Ui_MainWindow()
@@ -16,9 +16,10 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == '__main__':
+    print('test')
     app = QApplication(sys.argv)
 
     window = MainWindow()
     window.show()
 
-    sys.exit(app.exec_())
+    app.exec()

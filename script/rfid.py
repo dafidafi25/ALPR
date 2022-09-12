@@ -3,7 +3,7 @@ from smartcard.System import readers
 from smartcard.util import toHexString
 import requests
 import json
-from hikvision import isapiClient
+# from hikvision import isapiClient
 import cv2
 
 #Starting connection
@@ -84,11 +84,11 @@ if __name__=="__main__":
     init()
     setTempAuth(0,authA)
     setTempAuth(1,authB)
-    base_api = "https://9e98-158-140-163-210.ngrok.io/api/register/"
-    ip = "192.168.2.64"
-    port = "80"
-    host = 'http://'+ip + ':'+ port
-    cam = isapiClient(host, 'admin', '-arngnennscfrer2')
+    # base_api = "https://9e98-158-140-163-210.ngrok.io/api/register/"
+    # ip = "192.168.2.64"
+    # port = "80"
+    # host = 'http://'+ip + ':'+ port
+    # cam = isapiClient(host, 'admin', '-arngnennscfrer2')
     
 
     while True:
@@ -97,10 +97,10 @@ if __name__=="__main__":
             print(data)
             myobj = {'uid': toHexString(data)}
             print(myobj)
-            img = cam.pictureRequest()
-            cv2.imshow('image',img)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+            # img = cam.pictureRequest()
+            # cv2.imshow('image',img)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
 
           
         sleep(0.5)

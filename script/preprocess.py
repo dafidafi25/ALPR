@@ -4,9 +4,9 @@ import cv2
 import numpy as np
 
 # module level variables ##########################################################################
-CAL_VAL = np.loadtxt("/home/pi/work/tugas_akhir/ALPR/script/calibrated_value.txt")
+CAL_VAL = np.loadtxt("/home/rio/work/tugas_akhir/ALPR/script/calibrated_value.txt")
 (w, h, rotationx, rotationy, rotationz, panX, panY, stretchX, dist, G_S_F_W, G_S_F_H, A_T_B, A_T_W, T_V, Xtrans,
- Ytrans) = np.loadtxt("/home/pi/work/tugas_akhir/ALPR/script/calibrated_value.txt")
+ Ytrans) = np.loadtxt("/home/rio/work/tugas_akhir/ALPR/script/calibrated_value.txt")
 GAUSSIAN_SMOOTH_FILTER_SIZE = (int(G_S_F_W), int(G_S_F_H))  # last best = 3,3
 ADAPTIVE_THRESH_BLOCK_SIZE = int(A_T_B)  # 19 , last best = 19
 ADAPTIVE_THRESH_WEIGHT = int(A_T_W)  # 9, last best = 11

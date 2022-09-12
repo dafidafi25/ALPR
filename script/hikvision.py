@@ -8,6 +8,7 @@ import json
 from datetime import datetime
 import cv2
 import numpy as np
+import time
 
 def response_parser(response, present='dict'):
     if isinstance(response, (list,)):
@@ -60,6 +61,7 @@ class isapiClient:
         self.password = password
         self.timeout = float(timeout)
         self.isapi_prefix = isapi_prefix
+        print(self._check_session())
         self.req,self.valid = self._check_session()
         self.count_events = 1
 
@@ -102,11 +104,11 @@ class isapiClient:
         return response
     
     def pictureRequest(self):
-        # response = self.req.request( method='get', url= self.host + "/ISAPI/Streaming/channels/1/picture", timeout=self.timeout, stream=True)
-        # response.raise_for_status()
+        response = self.req.request( method='get', url= self.host + "/ISAPI/Streaming/channels/1/picture", timeout=self.timeout, stream=True)
+        response.raise_for_status()
         # data = response.json()
 
-        ##with beautiful soup
+        # ##with beautiful soup
         response = self.req.request( method='get', url= self.host + "/ISAPI/Streaming/channels/1/picture", timeout=self.timeout, stream=True).content
         image = np.asarray(bytearray(response), dtype="uint8")
         image = cv2.imdecode(image, cv2.IMREAD_COLOR)
@@ -114,8 +116,8 @@ class isapiClient:
         # response.raise_for_status()
         # data = response.json()
 
-        # response = response_parser(response)
-        # response = dateTimeConvert(response['Time']['localTime'])
+        # # response = response_parser(response)
+        # # response = dateTimeConvert(response['Time']['localTime'])
 
         return image
     
@@ -127,13 +129,16 @@ if __name__ == "__main__":
     port = "80"
     host = 'http://'+ip + ':'+ port
     cam = isapiClient(host, 'admin', '-arngnennscfrer2')
-    img = cam.pictureRequest()
+    while True:
+        time.sleep(100)
+    # img = cam.pictureRequest()
+
    
 
-    # for testing
-    cv2.imshow('image',img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    # # for testing
+    # cv2.imshow('image',img)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
 
     # cv2.imshow("Image",img)    
 

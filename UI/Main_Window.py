@@ -9,38 +9,44 @@
 ################################################################################
 
 from cgitb import grey
+from concurrent.futures import process
 from time import sleep
-from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+from PyQt5.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect,
     QSize, QTime, QUrl, Qt, QThread)
-from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
+from PyQt5.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide2.QtWidgets import (QApplication, QFormLayout, QHBoxLayout, QLabel,
+from PyQt5.QtWidgets import (QApplication, QFormLayout, QHBoxLayout, QLabel,
     QMainWindow, QMenuBar, QSizePolicy, QStatusBar,
     QVBoxLayout, QWidget)
 
 import requests
 import re
+import pytesseract
 
-from PySide2 import QtGui,QtCore
+from PyQt5 import QtGui,QtCore
 import cv2
 # some_file.py
 import sys
 # insert at 1, 0 is the script path (or '' in REPL)
-sys.path.insert(1, '/home/pi/work/tugas_akhir/ALPR/script')
+sys.path.insert(1, '/home/rio/work/tugas_akhir/ALPR/script')
 import rfid #type: ignore
 import licenese_plate_6 #type: ignore
 from database import databaseConnector #type: ignore
 from hikvision import isapiClient #type: ignore
+from DetectYolo import PlateLocalization, PlateOCR#type: ignore
 
 from smartcard.util import toHexString
-
+import torch
+import imutils as im
+import numpy as np
 
 class WorkerThread(QThread):
-    update_reader = QtCore.Signal(object,object,object)
-    update_user = QtCore.Signal(dict)
+    update_reader = QtCore.pyqtSignal(object,object,object)
+    update_user = QtCore.pyqtSignal(dict)
+
    
     rfid.init()
     def run(self):
@@ -49,61 +55,86 @@ class WorkerThread(QThread):
         ip = "192.168.2.64"
         port = "80"
         host = 'http://'+ip + ':'+ port
-        url = 'http://192.168.1.130:7000/api'
+        url = 'http://localhost:7000/api'
         self.cam = isapiClient(host, 'admin', '-arngnennscfrer2')
+        self.model = PlateLocalization()
+        self.model_ocr = PlateOCR()
         while True:
             if rfid.isNewCard() and self.gate == 0:
                 try:
-                    print("tes")
                     data_hex = rfid.readBlock(0,16,1)
                     data_hex = toHexString(data_hex)
 
                     data = requests.post(url+"/validate/uid/",json={
                         "uid": data_hex
                     }).json()
-
+                    if data == False:
+                        raise "Not Authenticated"
+                    
+                    self.plate_number_target = data['plate_number']
                     # self.cctv_img = self.requestPicture()
-                    self.cctv_img = cv2.imread("/home/pi/work/tugas_akhir/ALPR/images/rio/35.jpeg")
-                   
-                    img,cropped_thresh,cropped, detected_string = licenese_plate_6.detect_plate(self.cctv_img )
-                    detected_string = re.findall(r'\(?([0-9A-Za-z]+)\)?', detected_string)
-                    regex = ""
-                    cnt = 0
-                    print(detected_string)
-                    for text in detected_string:
-                        regex += text
-                        if cnt != len(detected_string)-1:
-                            regex += " "
-                        cnt+=1
-                    self.update_reader.emit(img,cropped_thresh,cropped)
-        
-                    # self.update_reader.emit(img,cropped_thresh,cropped)
-                    valid = requests.post(url+"/validate/plate_number/",json={
-                        "plate_number": regex
-                    }).json()
+                    self.cctv_img = cv2.imread("/home/rio/work/tugas_akhir/ALPR/images/test_new/2 A.jpg")
+                    cctv_images = self.model.get_plate(self.cctv_img)
+                    choosen_img = []
+                    detected_string = ""
+                    for index,cctv_image in enumerate(cctv_images):
+                        choosen_img.append(cctv_image)
+                        chars = self.model_ocr.get_character(cctv_image)
 
-                    assert valid != False, "Plate Number not Registered"
-                    if data['status'] == None:
-                        data['status'] = 0
+                        char_plate = []
+                        for char in chars:
+                            char_plate.append(char)
+                        
+                        char_plate.sort(key = lambda x:x[0])
+                        plate_string = ""
+                        for char in char_plate:
+                            text = char[5]
+                            if text == 24 : continue
+                            elif text > 24 : plate_string += str(self.model_ocr.get_alphabet(text-11))
+                            elif text > 9 : plate_string += str(self.model_ocr.get_alphabet(text-10))
+                            else : plate_string += str(text)
+                        isValid, savedIdx = self.validateString(plate_string)
+                        if isValid:
+                            valid_image = cctv_image.copy()
+                            xMin, xMax, yMin, yMax = 9999, 0, 9999, 0  
+                            for idx in savedIdx:
+                                xMin = xMin if char_plate[idx][0] > xMin else char_plate[idx][0]
+                                yMin = yMin if char_plate[idx][1] > yMin else char_plate[idx][1]
+                                xMax = xMax if char_plate[idx][2] < xMax else char_plate[idx][2]
+                                yMax = yMax if char_plate[idx][3] < yMax else char_plate[idx][3]
+                            cv2.rectangle(valid_image,(xMin,yMin),(xMax,yMax),(0,0,255),5)
+                            valid_image = valid_image[yMin:yMax, xMin:xMax]
+
+                            self.update_reader.emit(self.cctv_img,valid_image,choosen_img[0])
+                            if data['status'] == None:
+                                data['status'] = 0
+                            requests.post(url+"/insert/log", json = {
+                                "user_id": int(data['id']),
+                                "status": int(data['status'])
+                            })
+                
+                            requests.post(url+"/update/" + str(data['id']) , json = {
+                                "status": 1 if data['status'] == 0  else 0 
+                            })
+            
+                            self.update_user.emit(data)
+                            print("berhasil")
+
+                    # valid = requests.post(url+"/validate/plate_number/",json={
+                    #     "plate_number": regex
+                    # }).json()
+
+                    # assert valid != False, "Plate Number not Registered"
+                    
                 
              
-                    requests.post(url+"/insert/log", json = {
-                        "user_id": int(data['id']),
-                        "status": int(data['status'])
-                    })
-           
-                    requests.post(url+"/update/" + str(data['id']) , json = {
-                        "status": 1 if data['status'] == 0  else 0 
-                    })
-    
-                    self.update_user.emit(data)
-                    print("berhasil")
+                    
 
                     
-                    self.openGate()
-                except:
+                    # self.openGate()
+                except Exception as e:
                     # self.update_reader.emit(self.cctv_img,self.cctv_img,self.cctv_img)
-                    print("error")
+                    print(e)
             elif self.gate == 1:
                 self.counting()
                 if self.cnt == 5:
@@ -124,14 +155,37 @@ class WorkerThread(QThread):
     def reset(self):
         self.gate = 0
         self.cnt = 0
+
+    def ocr(self, img):
+        result = self.model_ocr(img, size=640)
+        print(result)
     
     def requestPicture(self):
         img = self.cam.pictureRequest()
         return img
 
-class WorkerThread2(QThread):
-    def run(self):
-        import app #type: ignore
+    def validateString(self, plate_number):
+        val_char = ""
+        idx_val = 0
+        saved_index = []
+        for index,char in enumerate(plate_number):
+            if char == self.plate_number_target[idx_val]:
+                idx_val +=1
+                saved_index.append(index+1)
+                val_char += char
+            if idx_val == len(self.plate_number_target):
+                break
+           
+        if val_char == self.plate_number_target:
+            print(f'Target : {self.plate_number_target} Plate Number Detected : {val_char}')
+            return (True, saved_index)
+        else:
+            print(f'Target : {self.plate_number_target} Plate Number Detected : {val_char}')
+            return (False, saved_index)
+
+# class WorkerThread2(QThread):
+#     def run(self):
+#         import app #type: ignore
         
 
 class Ui_MainWindow(object):
@@ -257,8 +311,8 @@ class Ui_MainWindow(object):
         self.worker.update_reader.connect(self.handlerfid)
         self.worker.update_user.connect(self.handleUpdateText)
 
-        self.worker2 = WorkerThread2()
-        self.worker2.start()
+        # self.worker2 = WorkerThread2()
+        # self.worker2.start()
     # setupUi
 
     def retranslateUi(self, MainWindow):

@@ -10,6 +10,10 @@ from hikvision import isapiClient
 
 import pytesseract
 
+def preprocess(img):
+    imgGrayscale, img_thresh = pp.preprocess(img)
+    return imgGrayscale
+
 def detect_plate(img):
     # img = cv2.imread(input)
 
