@@ -1,29 +1,61 @@
 import RPi.GPIO as GPIO
 import time
 
-GPIO.setmode(GPIO.BOARD)
+def main():
+  GPIO.setmode(GPIO.BOARD)
 
-GPIO.setup(11,GPIO.OUT)
+  GPIO.setup(11,GPIO.OUT)
 
-servo = GPIO.PWM(11,50)
+  p = GPIO.PWM(11, 50) # GPIO 17 for PWM with 50Hz
+  p.start(2.5) # Initialization
+  try:
+    while True:
+      p.ChangeDutyCycle(5)
+      time.sleep(0.5)
+      p.ChangeDutyCycle(7.5)
+      time.sleep(0.5)
+      p.ChangeDutyCycle(10)
+      time.sleep(0.5)
+      p.ChangeDutyCycle(12.5)
+      time.sleep(0.5)
+      p.ChangeDutyCycle(10)
+      time.sleep(0.5)
+      p.ChangeDutyCycle(7.5)
+      time.sleep(0.5)
+      p.ChangeDutyCycle(5)
+      time.sleep(0.5)
+      p.ChangeDutyCycle(2.5)
+      time.sleep(0.5)
+  except KeyboardInterrupt:
+    p.stop()
+    GPIO.cleanup()
 
-servo.start(0)
-print ("Waiting for 1 second")
-time.sleep(1)
 
-print ("Rotating at intervals of 12 degrees")
-duty = 2
-while duty <= 17:
-  servo.ChangeDutyCycle(duty)
-  time.sleep(0.2)
-  duty = duty + 1
+class GateServo:
+  def __init__(self):
+    GPIO.setmode(GPIO.BOARD)
+    GPIO.setup(11,GPIO.OUT)
+    self.servo = GPIO.PWM(11,50)
+    self.servo.start(0)
+    time.sleep(1)
+    self.duty = 0
 
-print ("Turning back to 0 degrees")
-servo.ChangeDutyCycle(2)
-time.sleep(0.2)
-servo.ChangeDutyCycle(0)
+  def open(self):
+    while self.duty <= 12.5:
+      self.servo.ChangeDutyCycle(self.duty)
+      time.sleep(0.05)
+      self.duty = self.duty + 2.5
 
-servo.stop()
-GPIO.cleanup()
-print ("Everything's cleaned up")
+  def close(self):
+    while self.duty >= 2.5:
+      self.servo.ChangeDutyCycle(self.duty)
+      time.sleep(0.05)
+      self.duty = self.duty - 2.5
+
+
+if __name__ == '__main__':
+  Servo = GateServo()
+  Servo.open()
+  Servo.close ()
+
 

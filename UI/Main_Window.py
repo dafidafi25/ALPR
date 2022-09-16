@@ -37,6 +37,7 @@ import licenese_plate_6 #type: ignore
 from database import databaseConnector #type: ignore
 from hikvision import isapiClient #type: ignore
 from DetectYolo import PlateLocalization, PlateOCR#type: ignore
+from servo import GateServo#type: ignore
 
 from smartcard.util import toHexString
 import torch
@@ -59,6 +60,7 @@ class WorkerThread(QThread):
         self.cam = isapiClient(host, 'admin', '-arngnennscfrer2')
         self.model = PlateLocalization()
         self.model_ocr = PlateOCR()
+        self.ServoGate = GateServo()
         while True:
             if rfid.isNewCard() and self.gate == 0:
                 try:
@@ -72,15 +74,17 @@ class WorkerThread(QThread):
                         raise "Not Authenticated"
                     
                     self.plate_number_target = data['plate_number']
-                    # self.cctv_img = self.requestPicture()
+                    #self.cctv_img = self.requestPicture()
                     self.cctv_img = cv2.imread("/home/rio/work/tugas_akhir/ALPR/images/test_new/2 A.jpg")
+                    self.update_reader.emit(self.cctv_img,[],[])
                     cctv_images = self.model.get_plate(self.cctv_img)
                     choosen_img = []
                     detected_string = ""
+                    
                     for index,cctv_image in enumerate(cctv_images):
                         choosen_img.append(cctv_image)
                         chars = self.model_ocr.get_character(cctv_image)
-
+                        self.update_reader.emit(self.cctv_img,[],choosen_img[index])
                         char_plate = []
                         for char in chars:
                             char_plate.append(char)
@@ -119,6 +123,7 @@ class WorkerThread(QThread):
             
                             self.update_user.emit(data)
                             print("berhasil")
+                            self.openGate()
 
                     # valid = requests.post(url+"/validate/plate_number/",json={
                     #     "plate_number": regex
@@ -131,30 +136,32 @@ class WorkerThread(QThread):
                     
 
                     
-                    # self.openGate()
+                            
                 except Exception as e:
                     # self.update_reader.emit(self.cctv_img,self.cctv_img,self.cctv_img)
                     print(e)
             elif self.gate == 1:
-                self.counting()
-                if self.cnt == 5:
-                    self.closeGate()
-                    self.reset()
+                sleep (2)
+                self.ServoGate.close()
+                self.gate = 0
                     
             sleep(1)
     
     def openGate(self):
+        self.ServoGate.open()
         self.gate = 1
 
     def closeGate(self):
+        self.ServoGate.close()
         self.gate = 0
     
     def counting(self):
         self.cnt += 1
+        sleep (0.5)
     
     def reset(self):
-        self.gate = 0
         self.cnt = 0
+        sleep (0.5)
 
     def ocr(self, img):
         result = self.model_ocr(img, size=640)
@@ -177,10 +184,10 @@ class WorkerThread(QThread):
                 break
            
         if val_char == self.plate_number_target:
-            print(f'Target : {self.plate_number_target} Plate Number Detected : {val_char}')
+            print(f'Target : {self.plate_number_target} Plate Filtered Value : {val_char} Real Plate Number : {plate_number}')
             return (True, saved_index)
         else:
-            print(f'Target : {self.plate_number_target} Plate Number Detected : {val_char}')
+            print(f'Target : {self.plate_number_target} Plate Filtered Value : {val_char} Real Plate Number : {plate_number}')
             return (False, saved_index)
 
 # class WorkerThread2(QThread):
@@ -357,8 +364,11 @@ class Ui_MainWindow(object):
     def setImage1(self,img,cropped_thresh,cropped):
         qt_img = self.convert_cv_qt(img,382,399)
         self.Gambar1.setPixmap(qt_img)
-        qt_img = self.convert_cv_qt(cropped,379,136)
-        self.gambar2.setPixmap(qt_img)
-        qt_img = self.convert_cv_qt(cropped_thresh,379,136)
-        self.gambar3.setPixmap(qt_img)
+        if len(cropped) > 0:
+            qt_img = self.convert_cv_qt(cropped,379,136) 
+            self.gambar2.setPixmap(qt_img)
+
+        if len(cropped_thresh) > 0:
+            qt_img = self.convert_cv_qt(cropped_thresh,379,136) 
+            self.gambar3.setPixmap(qt_img)
 
