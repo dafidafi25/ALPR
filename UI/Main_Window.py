@@ -18,8 +18,8 @@ from PyQt5.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PyQt5.QtWidgets import (QApplication, QFormLayout, QHBoxLayout, QLabel,
-    QMainWindow, QMenuBar, QSizePolicy, QStatusBar,
+from PyQt5.QtWidgets import (QAction,QApplication, QFormLayout, QHBoxLayout, QLabel,
+    QMainWindow, QMenuBar, QSizePolicy, QStatusBar, QMenu,
     QVBoxLayout, QWidget)
 
 import requests
@@ -47,9 +47,8 @@ import numpy as np
 class WorkerThread(QThread):
     update_reader = QtCore.pyqtSignal(object,object,object)
     update_user = QtCore.pyqtSignal(dict)
+    uid = QtCore.pyqtSignal(object)
 
-   
-    rfid.init()
     def run(self):
         self.gate = 0
         self.cnt = 0
@@ -61,89 +60,90 @@ class WorkerThread(QThread):
         self.model = PlateLocalization()
         self.model_ocr = PlateOCR()
         self.ServoGate = GateServo()
+        self.status = 0 
         while True:
-            if rfid.isNewCard() and self.gate == 0:
-                try:
-                    data_hex = rfid.readBlock(0,16,1)
-                    data_hex = toHexString(data_hex)
+            if self.status == 1:
+                print("Register Mode")
+                sleep(0.5)
+                pass
+            elif self.status == 0:
+                if rfid.isNewCard() and self.gate == 0:
+                    try:
+                        data_hex = rfid.readBlock(0,16,1)
+                        data_hex = toHexString(data_hex)
+                        self.uid.emit(data_hex)
 
-                    data = requests.post(url+"/validate/uid/",json={
-                        "uid": data_hex
-                    }).json()
-                    if data == False:
-                        raise "Not Authenticated"
-                    
-                    self.plate_number_target = data['plate_number']
-                    #self.cctv_img = self.requestPicture()
-                    self.cctv_img = cv2.imread("/home/rio/work/tugas_akhir/ALPR/images/test_new/2 A.jpg")
-                    self.update_reader.emit(self.cctv_img,[],[])
-                    cctv_images = self.model.get_plate(self.cctv_img)
-                    choosen_img = []
-                    detected_string = ""
-                    
-                    for index,cctv_image in enumerate(cctv_images):
-                        choosen_img.append(cctv_image)
-                        chars = self.model_ocr.get_character(cctv_image)
-                        self.update_reader.emit(self.cctv_img,[],choosen_img[index])
-                        char_plate = []
-                        for char in chars:
-                            char_plate.append(char)
+                        data = requests.post(url+"/validate/uid/",json={
+                            "uid": data_hex
+                        }).json()
+                        if data == False:
+                            raise "Not Authenticated"
                         
-                        char_plate.sort(key = lambda x:x[0])
-                        plate_string = ""
-                        for char in char_plate:
-                            text = char[5]
-                            if text == 24 : continue
-                            elif text > 24 : plate_string += str(self.model_ocr.get_alphabet(text-11))
-                            elif text > 9 : plate_string += str(self.model_ocr.get_alphabet(text-10))
-                            else : plate_string += str(text)
-                        isValid, savedIdx = self.validateString(plate_string)
-                        if isValid:
-                            valid_image = cctv_image.copy()
-                            xMin, xMax, yMin, yMax = 9999, 0, 9999, 0  
-                            for idx in savedIdx:
-                                xMin = xMin if char_plate[idx][0] > xMin else char_plate[idx][0]
-                                yMin = yMin if char_plate[idx][1] > yMin else char_plate[idx][1]
-                                xMax = xMax if char_plate[idx][2] < xMax else char_plate[idx][2]
-                                yMax = yMax if char_plate[idx][3] < yMax else char_plate[idx][3]
-                            cv2.rectangle(valid_image,(xMin,yMin),(xMax,yMax),(0,0,255),5)
-                            valid_image = valid_image[yMin:yMax, xMin:xMax]
-
-                            self.update_reader.emit(self.cctv_img,valid_image,choosen_img[0])
-                            if data['status'] == None:
-                                data['status'] = 0
-                            requests.post(url+"/insert/log", json = {
-                                "user_id": int(data['id']),
-                                "status": int(data['status'])
-                            })
-                
-                            requests.post(url+"/update/" + str(data['id']) , json = {
-                                "status": 1 if data['status'] == 0  else 0 
-                            })
-            
-                            self.update_user.emit(data)
-                            print("berhasil")
-                            self.openGate()
-
-                    # valid = requests.post(url+"/validate/plate_number/",json={
-                    #     "plate_number": regex
-                    # }).json()
-
-                    # assert valid != False, "Plate Number not Registered"
-                    
-                
-             
-                    
-
-                    
+                        self.plate_number_target = data['plate_number']
+                        #self.cctv_img = self.requestPicture()
+                        self.cctv_img = cv2.imread("/home/rio/work/tugas_akhir/ALPR/images/test_new/2 A.jpg")
+                        self.update_reader.emit(self.cctv_img,[],[])
+                        cctv_images = self.model.get_plate(self.cctv_img)
+                        choosen_img = []
+                        detected_string = ""
+                        
+                        for index,cctv_image in enumerate(cctv_images):
+                            choosen_img.append(cctv_image)
+                            chars = self.model_ocr.get_character(cctv_image)
+                            self.update_reader.emit(self.cctv_img,[],choosen_img[index])
+                            char_plate = []
+                            for char in chars:
+                                char_plate.append(char)
                             
-                except Exception as e:
-                    # self.update_reader.emit(self.cctv_img,self.cctv_img,self.cctv_img)
-                    print(e)
-            elif self.gate == 1:
-                sleep (2)
-                self.ServoGate.close()
-                self.gate = 0
+                            char_plate.sort(key = lambda x:x[0])
+                            plate_string = ""
+                            for char in char_plate:
+                                text = char[5]
+                                if text == 24 : continue
+                                elif text > 24 : plate_string += str(self.model_ocr.get_alphabet(text-11))
+                                elif text > 9 : plate_string += str(self.model_ocr.get_alphabet(text-10))
+                                else : plate_string += str(text)
+                            isValid, savedIdx = self.validateString(plate_string)
+                            if isValid:
+                                valid_image = cctv_image.copy()
+                                xMin, xMax, yMin, yMax = 9999, 0, 9999, 0  
+                                for idx in savedIdx:
+                                    xMin = xMin if char_plate[idx][0] > xMin else char_plate[idx][0]
+                                    yMin = yMin if char_plate[idx][1] > yMin else char_plate[idx][1]
+                                    xMax = xMax if char_plate[idx][2] < xMax else char_plate[idx][2]
+                                    yMax = yMax if char_plate[idx][3] < yMax else char_plate[idx][3]
+                                cv2.rectangle(valid_image,(xMin,yMin),(xMax,yMax),(0,0,255),5)
+                                valid_image = valid_image[yMin:yMax, xMin:xMax]
+
+                                self.update_reader.emit(self.cctv_img,valid_image,choosen_img[0])
+                                if data['status'] == None:
+                                    data['status'] = 0
+                                requests.post(url+"/insert/log", json = {
+                                    "user_id": int(data['id']),
+                                    "status": int(data['status'])
+                                })
+                    
+                                requests.post(url+"/update/" + str(data['id']) , json = {
+                                    "status": 1 if data['status'] == 0  else 0 
+                                })
+                
+                                self.update_user.emit(data)
+                                print("berhasil")
+                                self.openGate()
+
+                        # valid = requests.post(url+"/validate/plate_number/",json={
+                        #     "plate_number": regex
+                        # }).json()
+
+                        # assert valid != False, "Plate Number not Registered"
+ 
+                    except Exception as e:
+                        # self.update_reader.emit(self.cctv_img,self.cctv_img,self.cctv_img)
+                        print(e)
+                elif self.gate == 1:
+                    sleep (2)
+                    self.ServoGate.close()
+                    self.gate = 0
                     
             sleep(1)
     
@@ -200,13 +200,13 @@ class Ui_MainWindow(object):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
         MainWindow.resize(800, 600)
+        self.actionRegister = QAction(MainWindow)
+        self.actionRegister.setObjectName(u"actionRegister")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.horizontalLayoutWidget = QWidget(self.centralwidget)
         self.horizontalLayoutWidget.setObjectName(u"horizontalLayoutWidget")
         self.horizontalLayoutWidget.setGeometry(QRect(10, 10, 771, 401))
-        grey = QPixmap(500,401)
-        grey.fill(QColor('darkgray'))
         self.horizontalLayout = QHBoxLayout(self.horizontalLayoutWidget)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
@@ -255,23 +255,21 @@ class Ui_MainWindow(object):
         self.left_layout = QFormLayout()
         self.left_layout.setObjectName(u"left_layout")
         self.left_layout.setFormAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
-        self.Nama = QLabel(self.horizontalLayoutWidget_2)
-        self.Nama.setObjectName(u"Nama")
-        self.Nama.setAlignment(Qt.AlignCenter)
-
-        self.left_layout.setWidget(0, QFormLayout.LabelRole, self.Nama)
-
         self.Email = QLabel(self.horizontalLayoutWidget_2)
         self.Email.setObjectName(u"Email")
         self.Email.setAlignment(Qt.AlignCenter)
         self.Email.setWordWrap(False)
 
-        self.left_layout.setWidget(2, QFormLayout.LabelRole, self.Email)
-        
+        self.left_layout.setWidget(0, QFormLayout.LabelRole, self.Email)
+
+        self.Nama = QLabel(self.horizontalLayoutWidget_2)
+        self.Nama.setObjectName(u"Nama")
+        self.Nama.setAlignment(Qt.AlignCenter)
+
+        self.left_layout.setWidget(2, QFormLayout.LabelRole, self.Nama)
+
         self.Status = QLabel(self.horizontalLayoutWidget_2)
         self.Status.setObjectName(u"Status")
-        self.Status.setAlignment(Qt.AlignCenter)
-        self.Status.setWordWrap(False)
 
         self.left_layout.setWidget(1, QFormLayout.LabelRole, self.Status)
 
@@ -300,41 +298,42 @@ class Ui_MainWindow(object):
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
         self.menubar.setGeometry(QRect(0, 0, 800, 24))
+        self.menuMenu = QMenu(self.menubar)
+        self.menuMenu.setObjectName(u"menuMenu")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
         MainWindow.setStatusBar(self.statusbar)
 
-        self.retranslateUi(MainWindow)
+        self.menubar.addAction(self.menuMenu.menuAction())
+        self.menuMenu.addAction(self.actionRegister)
 
-        QMetaObject.connectSlotsByName(MainWindow)
-
-        self.Gambar1.setPixmap(grey)
-        self.gambar2.setPixmap(grey)
-        self.gambar3.setPixmap(grey)
+        rfid.init()
 
         self.worker = WorkerThread()
         self.worker.start()
         self.worker.update_reader.connect(self.handlerfid)
         self.worker.update_user.connect(self.handleUpdateText)
 
-        # self.worker2 = WorkerThread2()
-        # self.worker2.start()
+        self.retranslateUi(MainWindow)
+
+        QMetaObject.connectSlotsByName(MainWindow)
     # setupUi
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
+        self.actionRegister.setText(QCoreApplication.translate("MainWindow", u"Register", None))
         self.Gambar1.setText("")
         self.ket_gambar2.setText(QCoreApplication.translate("MainWindow", u"Pelat Nomor", None))
         self.gambar2.setText("")
         self.ket_gambar3.setText(QCoreApplication.translate("MainWindow", u"Pelat Nomor Olahan", None))
         self.gambar3.setText("")
-        self.Nama.setText(QCoreApplication.translate("MainWindow", u"Email", None))
         self.Email.setText(QCoreApplication.translate("MainWindow", u"Nama", None))
+        self.Nama.setText(QCoreApplication.translate("MainWindow", u"Email", None))
+        self.Status.setText(QCoreApplication.translate("MainWindow", u"Status", None))
         self.Registered_plate.setText(QCoreApplication.translate("MainWindow", u"Pelat Nomor", None))
         self.Phone.setText(QCoreApplication.translate("MainWindow", u"Phone", None))
-        self.Status.setText(QCoreApplication.translate("MainWindow", u"Status", None))
-    # retranslateUi
+        self.menuMenu.setTitle(QCoreApplication.translate("MainWindow", u"Menu", None))
     
     def convert_cv_qt(self, img, widht, height):
         """Convert from an opencv image to QPixmap"""

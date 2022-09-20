@@ -9,14 +9,10 @@ from smartcard.System import readers
 from smartcard.util import toHexString
 from flask_cors import CORS,cross_origin
 # from flask_mysqldb import MySQL
+from rfid import readBlock,isNewCard
 
-from rfid import init,readBlock,isNewCard
- 
-device = readers()
-connection = device[0].createConnection()
-connection.connect()
 
-init()
+# init()
 authA = '00 00 00 00 00 00'
 authB = 'FF FF FF FF FF FF'
 
@@ -67,26 +63,42 @@ def validateByUid():
 
 @app.route('/api/register/',methods = ['POST'])
 def register():
-    if isNewCard():
-        data = readBlock(0,16,1)
-        uid = toHexString(data)
-        content_type = request.headers.get('Content-Type')
+    content_type = request.headers.get('Content-Type')
 
-        if (content_type == 'application/json'):
-            plate_number = request.json['plate_number']
-            name = request.json['name']
-            email = request.json['email']
-            phone = request.json['phone']
-            result =  {
-                "uid" : uid,
-                "plate_number": plate_number
+    if (content_type == 'application/json'):
+        plate_number = request.json['plate_number']
+        name = request.json['name']
+        email = request.json['email']
+        phone = request.json['phone']
+        uid  = request.json['uid']
+        status  = request.json['status']
+        result =  {
+            "uid" : uid,
+            "plate_number": plate_number
+        }
+        database.insertData(uid=uid,plate_number=plate_number,name=name,email=email,phone=phone, status = status)
+        return jsonify(result)
+ 
+
+@app.route('/api/scan/rfid/',methods = ['GET'])
+def scanCard():
+    
+    try: 
+        if isNewCard():
+            data = readBlock(0,16,1)
+            uid = toHexString(data)
+            return {
+                "uid" : uid
             }
-            database.insertData(uid=uid,plate_number=plate_number,name=name,email=email,phone=phone)
-            return jsonify(result)
-    else:
-        return jsonify({
-            "Message" : "New Card Not Detected"
-        })
+        else:
+            return {
+                "uid" : None
+            }
+    except Exception as err:
+        print(err)
+        return {
+                "uid" : None
+            }
 
 @app.route('/api/rfid/get', methods=['GET'])
 def getData():

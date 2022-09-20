@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 
 ###query###
-INSERT_DATA = "INSERT INTO rfid (uid,plate_number,name,phone,email) VALUES (%s, %s, %s, %s, %s)"
+INSERT_DATA = "INSERT INTO rfid (uid,plate_number,name,phone,email, status) VALUES (%s, %s, %s, %s, %s, %s)"
 INSERT_LOG_DATA = "INSERT INTO rfid_log (user_id,status,waktu) VALUE (%s, %s, %s)"
 GET_DATA_BY_UID = "SELECT * FROM rfid WHERE uid = %s"
 GET_DATA_BY_PLATE_NUMBER = "SELECT * FROM rfid WHERE plate_number = %s"
@@ -24,9 +24,9 @@ class databaseConnector:
 
         self.controller =  self.database.cursor()
     
-    def insertData(self,uid,plate_number,name,phone,email):
+    def insertData(self,uid,plate_number,name,phone,email, status):
         if self.validateDataByUid(uid) == False and self.validateDataByUid(plate_number) == False:
-            val = (uid,plate_number,name,phone,email)
+            val = (uid,plate_number,name,phone,email, status)
             self.controller.execute(INSERT_DATA,val)
             self.database.commit()
         else:
