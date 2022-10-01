@@ -58,12 +58,13 @@ class WorkerThread(QThread):
         url = 'http://localhost:7000/api'
         self.cam = isapiClient(host, 'admin', '-arngnennscfrer2')
         self.model = PlateLocalization()
+        print("Loading Model On Progress")
         self.model_ocr = PlateOCR()
         self.ServoGate = GateServo()
+        print("Loading Model Done")
         self.status = 0 
         while True:
             if self.status == 1:
-                print("Register Mode")
                 sleep(0.5)
                 pass
             elif self.status == 0:
@@ -81,7 +82,7 @@ class WorkerThread(QThread):
                         
                         self.plate_number_target = data['plate_number']
                         #self.cctv_img = self.requestPicture()
-                        self.cctv_img = cv2.imread("/home/rio/work/tugas_akhir/ALPR/images/test_new/2 A.jpg")
+                        self.cctv_img = cv2.imread("/home/rio/work/tugas_akhir/ALPR/images/test_new/1 A.jpg")
                         self.update_reader.emit(self.cctv_img,[],[])
                         cctv_images = self.model.get_plate(self.cctv_img)
                         choosen_img = []
